@@ -1,0 +1,454 @@
+﻿<Window x:Class="MarcelinoClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:MarcelinoClient"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Marcelino Client" Height="760" Width="1120"
+        Icon="Assets/MarcelinoClient.ico"
+        MinHeight="640" MinWidth="820"
+        Background="{DynamicResource PageBrush}" Foreground="{DynamicResource TextBrush}"
+        FontFamily="Segoe UI" WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="26" ResizeBorderThickness="4" GlassFrameThickness="0"
+                            CornerRadius="0" UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="CaptionButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}" CornerRadius="0">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ButtonGlyph" Text="{TemplateBinding Tag}"
+                                               FontFamily="Segoe MDL2 Assets" FontSize="10" Foreground="{TemplateBinding Foreground}"
+                                               Width="32" TextAlignment="Center" Margin="0" VerticalAlignment="Center" />
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                      RecognizesAccessKey="True" />
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="Tag" Value="{x:Null}">
+                                    <Setter TargetName="ButtonGlyph" Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                                <Trigger Property="Content" Value="">
+                                    <Setter TargetName="ButtonGlyph" Property="Margin" Value="0" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Chrome" Property="Opacity" Value="0.8" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Chrome" Property="Opacity" Value="0.6" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.45" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="CloseCaptionButtonStyle" TargetType="Button" BasedOn="{StaticResource CaptionButtonStyle}">
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#C42B1C" />
+                        <Setter Property="Foreground" Value="{DynamicResource SelectedTextBrush}" />
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="#A32116" />
+                        <Setter Property="Foreground" Value="{DynamicResource SelectedTextBrush}" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="WindowHeader" Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Marcelino Client" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock x:Name="SessionText" Grid.Column="1" Text="{DynamicResource Unauthenticated}" VerticalAlignment="Center"
+                       Margin="18,0,12,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                       Visibility="{Binding Visibility, ElementName=MainView}" Foreground="{DynamicResource MutedBrush}" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Label Content="{DynamicResource LanguageLabel}" Target="{Binding ElementName=LanguageSelector}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                <ComboBox x:Name="LanguageSelector" Width="156" SelectedValuePath="CultureName" DisplayMemberPath="NativeName"
+                          AutomationProperties.Name="{DynamicResource LanguageLabel}"
+                          SelectionChanged="LanguageSelector_SelectionChanged" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Label Content="{DynamicResource ThemeLabel}" Target="{Binding ElementName=ThemeSelector}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                <ComboBox x:Name="ThemeSelector" Width="110" SelectedIndex="0" AutomationProperties.Name="{DynamicResource ThemeLabel}"
+                          SelectionChanged="ThemeSelector_SelectionChanged">
+                    <ComboBoxItem Content="{DynamicResource LightTheme}" /><ComboBoxItem Content="{DynamicResource DarkTheme}" />
+                </ComboBox>
+            </StackPanel>
+            <Button x:Name="DisconnectButton" Grid.Column="4" Content="{DynamicResource Disconnect}" Tag="&#xE7E8;" Margin="12,0,0,0"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                    Visibility="{Binding Visibility, ElementName=MainView}" Click="DisconnectButton_Click" />
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="10,0,0,0" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button x:Name="MinimizeWindowButton" Style="{StaticResource CaptionButtonStyle}" Content="" Tag="&#xE921;"
+                    ToolTip="{DynamicResource Minimize}" AutomationProperties.Name="{DynamicResource Minimize}" Click="MinimizeWindowButton_Click" />
+                <Button x:Name="MaximizeWindowButton" Style="{StaticResource CaptionButtonStyle}" Content="" Tag="&#xE922;"
+                    ToolTip="{DynamicResource Maximize}" AutomationProperties.Name="{DynamicResource Maximize}" Click="MaximizeWindowButton_Click" />
+                <Button x:Name="CloseWindowButton" Style="{StaticResource CloseCaptionButtonStyle}" Content="" Tag="&#xE8BB;"
+                    ToolTip="{DynamicResource CloseToTray}" AutomationProperties.Name="{DynamicResource CloseToTray}" Click="CloseWindowButton_Click" />
+                </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid x:Name="LoginView">
+                <Border Style="{StaticResource PanelStyle}" Padding="26" Width="560"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock x:Name="LoginTitle" Text="{DynamicResource SmbLoginTitle}" FontSize="19" FontWeight="SemiBold" Margin="0,0,0,20" />
+                        <TextBlock Text="{DynamicResource ServerOrAddress}" FontWeight="SemiBold" FontSize="12" />
+                        <DockPanel Margin="0,6,0,8">
+                            <Button x:Name="ScanButton" Content="{DynamicResource BrowseNetwork}" Tag="&#xE721;" Margin="8,0,0,0"
+                                    DockPanel.Dock="Right" Click="ScanButton_Click" />
+                            <TextBox x:Name="HostInput" Height="36" VerticalContentAlignment="Center" Padding="8,0" />
+                        </DockPanel>
+                        <ListBox x:Name="HostsList" Height="100" Margin="0,0,0,14"
+                                 SelectionChanged="HostsList_SelectionChanged" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{DynamicResource OptionalDomain}" FontWeight="SemiBold" FontSize="12" />
+                                <TextBox x:Name="DomainInput" Height="36" Margin="0,6,0,14"
+                                         VerticalContentAlignment="Center" Padding="8,0"
+                                         KeyDown="LoginInput_KeyDown" />
+                                <TextBlock Text="{DynamicResource Username}" FontWeight="SemiBold" FontSize="12" />
+                                <TextBox x:Name="UsernameInput" Height="36" Margin="0,6,0,0"
+                                         VerticalContentAlignment="Center" Padding="8,0"
+                                         KeyDown="LoginInput_KeyDown" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{DynamicResource Password}" FontWeight="SemiBold" FontSize="12" />
+                                <PasswordBox x:Name="PasswordInput" Height="36" Margin="0,6,0,14" Padding="8,0"
+                                             KeyDown="PasswordInput_KeyDown" />
+                            </StackPanel>
+                        </Grid>
+                        <Button x:Name="ConnectButton" Content="{DynamicResource ValidateConnect}" Tag="&#xE8D4;" Height="40" Margin="0,20,0,0"
+                                Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource SelectedTextBrush}" BorderThickness="0"
+                                FontWeight="SemiBold" Click="ConnectButton_Click" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid x:Name="MainView" Visibility="Collapsed">
+                <TabControl x:Name="MainTabs" Background="{DynamicResource PageBrush}">
+                    <TabItem Header="{DynamicResource SystemTab}" Tag="&#xE770;">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="14">
+                                <Border Style="{StaticResource PanelStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource ServerSummary}" FontSize="17" FontWeight="SemiBold" />
+                                        <WrapPanel Margin="0,10,0,0">
+                                            <TextBlock Text="{DynamicResource RefreshEvery}" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="StatusIntervalInput" Width="75" Margin="8,0" SelectedIndex="1"
+                                                      SelectionChanged="StatusIntervalInput_SelectionChanged">
+                                                <ComboBoxItem Content="1" /><ComboBoxItem Content="5" /><ComboBoxItem Content="10" />
+                                                <ComboBoxItem Content="20" /><ComboBoxItem Content="30" /><ComboBoxItem Content="60" />
+                                                <ComboBoxItem Content="120" /><ComboBoxItem Content="300" />
+                                            </ComboBox>
+                                            <TextBlock Text="{DynamicResource Seconds}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                            <Button x:Name="RefreshStatusButton" Content="{DynamicResource RefreshNow}" Tag="&#xE72C;" Click="RefreshStatusButton_Click" />
+                                        </WrapPanel>
+                                        <TextBlock x:Name="SystemOverview" Text="{DynamicResource AwaitingAuthentication}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,14" />
+                                        <UniformGrid Columns="4">
+                                            <StackPanel Margin="8"><TextBlock Text="{DynamicResource Cpu}" Foreground="{DynamicResource MutedBrush}" /><TextBlock Text="{Binding Cpu}" FontSize="20" FontWeight="SemiBold" /><TextBlock Text="{Binding CpuDetails}" TextWrapping="Wrap" /></StackPanel>
+                                            <StackPanel Margin="8"><TextBlock Text="{DynamicResource Memory}" Foreground="{DynamicResource MutedBrush}" /><TextBlock Text="{Binding Memory}" FontSize="20" FontWeight="SemiBold" /><TextBlock Text="{Binding MemoryDetails}" TextWrapping="Wrap" /></StackPanel>
+                                            <StackPanel Margin="8"><TextBlock Text="{DynamicResource Uptime}" Foreground="{DynamicResource MutedBrush}" /><TextBlock Text="{Binding Uptime}" FontSize="20" FontWeight="SemiBold" /></StackPanel>
+                                            <StackPanel Margin="8"><TextBlock Text="{DynamicResource Network}" Foreground="{DynamicResource MutedBrush}" /><TextBlock Text="{Binding Network}" TextWrapping="Wrap" FontWeight="SemiBold" /></StackPanel>
+                                        </UniformGrid>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource PanelStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource SystemHardware}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                        <ItemsControl ItemsSource="{Binding Hardware}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,4">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="185" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Key}" Foreground="{DynamicResource MutedBrush}" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource DisksTab}" Tag="&#xEDA2;">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="14">
+                                <Border Style="{StaticResource PanelStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource MountedFilesystems}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                        <DataGrid x:Name="FileSystemsGrid" ItemsSource="{Binding FileSystems}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" MinHeight="130" MaxHeight="280">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Binding="{Binding Mountpoint}" Width="*" />
+                                                <DataGridTextColumn Binding="{Binding Device}" Width="*" />
+                                                <DataGridTextColumn Binding="{Binding Format}" Width="100" />
+                                                <DataGridTextColumn Binding="{Binding Usage}" Width="130" />
+                                                <DataGridTextColumn Binding="{Binding Free}" Width="140" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource PanelStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource PhysicalDisksSmart}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                        <DataGrid x:Name="PhysicalDisksGrid" ItemsSource="{Binding Disks}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" MinHeight="130" MaxHeight="280">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Binding="{Binding Device}" Width="120" />
+                                                <DataGridTextColumn Binding="{Binding Model}" Width="*" />
+                                                <DataGridTextColumn Binding="{Binding Capacity}" Width="130" />
+                                                <DataGridTextColumn Binding="{Binding Temperature}" Width="130" />
+                                                <DataGridTextColumn Binding="{Binding Smart}" Width="100" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="{Binding StorageStatus}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource RaidTab}" Tag="&#xE8F1;">
+                        <StackPanel Margin="14">
+                            <Border Style="{StaticResource PanelStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource RaidOverallStatus}" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding RaidStatus}" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource PanelStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource ArraysSync}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                    <DataGrid x:Name="ArraysGrid" ItemsSource="{Binding Arrays}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" MinHeight="180" MaxHeight="300">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Binding="{Binding Name}" Width="*" />
+                                            <DataGridTextColumn Binding="{Binding Level}" Width="100" />
+                                            <DataGridTextColumn Binding="{Binding Status}" Width="120" />
+                                            <DataGridTextColumn Binding="{Binding Devices}" Width="100" />
+                                            <DataGridTextColumn Binding="{Binding Activity}" Width="2*" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource InternetTab}" Tag="&#xE774;">
+                        <StackPanel Margin="14">
+                            <Border Style="{StaticResource PanelStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource IpAddresses}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12" />
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="4"><TextBlock Text="{DynamicResource LocalIpNas}" Foreground="{DynamicResource MutedBrush}" /><TextBox Text="{Binding LocalIp, Mode=OneWay}" IsReadOnly="True" Margin="0,5,10,0" /></StackPanel>
+                                        <StackPanel Margin="4"><TextBlock Text="{DynamicResource PublicIp}" Foreground="{DynamicResource MutedBrush}" /><TextBox Text="{Binding PublicIp, Mode=OneWay}" IsReadOnly="True" Margin="0,5,0,0" /></StackPanel>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource PanelStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource RecentSpeedTests}" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding InternetStatus}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,10" />
+                                    <TextBox Text="{Binding InternetTests, Mode=OneWay}" Height="280" IsReadOnly="True" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource DnsDhcpTab}" Tag="&#xE968;">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="14">
+                                <Border Style="{StaticResource PanelStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource ServiceStatus}" FontSize="17" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding DnsStatus}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource PanelStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource ActiveDhcpLeases}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                        <DataGrid x:Name="DhcpLeasesGrid" ItemsSource="{Binding Leases}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" MinHeight="130" MaxHeight="240">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Binding="{Binding Ip}" Width="*" />
+                                                <DataGridTextColumn Binding="{Binding Hostname}" Width="*" />
+                                                <DataGridTextColumn Binding="{Binding Mac}" Width="*" />
+                                                <DataGridTextColumn Binding="{Binding Expires}" Width="*" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </StackPanel>
+                                </Border>
+                                <UniformGrid Columns="2">
+                                    <Border Style="{StaticResource PanelStyle}" Margin="0,0,6,0">
+                                        <StackPanel><TextBlock Text="{DynamicResource AllowedAccess}" FontSize="17" FontWeight="SemiBold" /><TextBox Text="{Binding AllowedEvents, Mode=OneWay}" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="190" Margin="0,10,0,0" IsReadOnly="True" /></StackPanel>
+                                    </Border>
+                                    <Border Style="{StaticResource PanelStyle}" Margin="6,0,0,0">
+                                        <StackPanel><TextBlock Text="{DynamicResource BlockedAccess}" FontSize="17" FontWeight="SemiBold" /><TextBox Text="{Binding BlockedEvents, Mode=OneWay}" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="190" Margin="0,10,0,0" IsReadOnly="True" /></StackPanel>
+                                    </Border>
+                                </UniformGrid>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource SharesTab}" Tag="&#xE8B7;">
+                        <Grid Margin="14">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                            <DockPanel Margin="0,0,0,10">
+                                <Button x:Name="OpenSharesButton" Content="{DynamicResource OpenInExplorer}" Tag="&#xE8DA;" DockPanel.Dock="Right"
+                                        Click="OpenSharesButton_Click" />
+                                <TextBlock x:Name="SharesSummary" Text="{DynamicResource AwaitingAuthentication}"
+                                           VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" />
+                            </DockPanel>
+                            <ListView x:Name="SharesList" Grid.Row="1" MouseDoubleClick="SharesList_MouseDoubleClick">
+                                <ListView.View>
+                                    <GridView><GridViewColumn Header="{DynamicResource Share}" DisplayMemberBinding="{Binding}" Width="420" /></GridView>
+                                </ListView.View>
+                            </ListView>
+                            <TextBlock Grid.Row="2" Text="{Binding ShareStatus}" TextWrapping="Wrap" Margin="0,12,0,8" />
+                            <DataGrid x:Name="SharesPermissionsGrid" Grid.Row="3" ItemsSource="{Binding Shares}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Binding="{Binding Name}" Width="*" />
+                                    <DataGridTextColumn Binding="{Binding Path}" Width="*" />
+                                    <DataGridTextColumn Binding="{Binding Users}" Width="*" />
+                                    <DataGridTextColumn Binding="{Binding ReadOnly}" Width="120" />
+                                    <DataGridTextColumn Binding="{Binding WriteAccess}" Width="*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource BackupTab}" Tag="&#xE74E;">
+                        <ScrollViewer x:Name="BackupScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <Grid MinHeight="510" Height="{Binding ViewportHeight, ElementName=BackupScrollViewer}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="90" />
+                            </Grid.RowDefinitions>
+                            <Grid Margin="10,10,10,0" MinHeight="310">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource PanelStyle}" Margin="0" Padding="12">
+                                    <DockPanel LastChildFill="True">
+                                        <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+                                                <Button x:Name="SetDestinationButton" Content="{DynamicResource UseAsDestination}" Tag="&#xE8B7;"
+                                                    Click="SetDestinationButton_Click" />
+                                            <TextBlock x:Name="DestinationText" Text="{DynamicResource NoDestination}"
+                                                       TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,10,0,0" />
+                                        </StackPanel>
+                                        <TextBlock DockPanel.Dock="Top" Text="{DynamicResource RemoteFiles}" FontSize="16" FontWeight="SemiBold" />
+                                        <DockPanel DockPanel.Dock="Top" Margin="0,10,0,8">
+                                            <Button x:Name="RemoteUpButton" Content="" Tag="&#xE74A;" ToolTip="{DynamicResource ParentFolder}" AutomationProperties.Name="{DynamicResource ParentFolder}" DockPanel.Dock="Left" Margin="0,0,6,0" Click="RemoteUpButton_Click" />
+                                            <Button x:Name="RefreshRemoteButton" Content="" Tag="&#xE72C;" ToolTip="{DynamicResource RefreshRemoteFiles}" AutomationProperties.Name="{DynamicResource RefreshRemoteFiles}" DockPanel.Dock="Right" Margin="6,0,0,0" Click="RefreshRemoteButton_Click" />
+                                            <TextBlock x:Name="RemotePathText" Text="{DynamicResource NoConnection}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                        <DataGrid x:Name="RemoteEntriesGrid" MinHeight="120" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                                  SelectionMode="Single" SelectionChanged="RemoteEntriesGrid_SelectionChanged" MouseDoubleClick="RemoteEntriesGrid_MouseDoubleClick">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Binding="{Binding Name}" Width="*" />
+                                                <DataGridTextColumn Binding="{Binding Kind}" Width="135" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </DockPanel>
+                                </Border>
+                                <Border Grid.Column="2" Style="{StaticResource PanelStyle}" Margin="0" Padding="12">
+                                    <DockPanel>
+                                        <WrapPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+                                            <Button x:Name="AddSourceButton" Content="{DynamicResource AddFolder}" Tag="&#xE710;" Click="AddSourceButton_Click" />
+                                            <Button x:Name="RemoveSourceButton" Content="{DynamicResource RemoveFolder}" Tag="&#xE738;" Margin="6,0,0,0" Click="RemoveSourceButton_Click" />
+                                        </WrapPanel>
+                                        <TextBlock DockPanel.Dock="Top" Text="{DynamicResource LocalSourceFolders}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+                                        <ListBox x:Name="BackupSourcesList" />
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
+                            <StackPanel Grid.Row="1" Margin="10,8,10,8">
+                                <WrapPanel>
+                                    <Button x:Name="StartBackupButton" Content="{DynamicResource StartBackup}" Tag="&#xE898;" IsEnabled="False" Margin="0,0,6,0" Click="StartBackupButton_Click" />
+                                    <Button x:Name="RestoreBackupButton" Content="{DynamicResource RestoreToPc}" Tag="&#xE896;" IsEnabled="False" Margin="0,0,6,0" Click="RestoreBackupButton_Click" />
+                                    <Button x:Name="CancelTransferButton" Content="{DynamicResource Cancel}" Tag="&#xE711;" IsEnabled="False" Margin="0,0,10,0" Click="CancelTransferButton_Click" />
+                                    <CheckBox x:Name="IncrementalRestoreInput" Content="{DynamicResource IncrementalRestore}" IsChecked="True" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}" />
+                                </WrapPanel>
+                                <ProgressBar x:Name="BackupProgressBar" Height="12" Margin="0,10,0,0" Value="0" />
+                                <TextBlock x:Name="BackupProgressText" Text="{DynamicResource AwaitingTransfer}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            </StackPanel>
+                            <TextBox x:Name="BackupLog" Grid.Row="2" Margin="10,0,10,10" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                        </Grid>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="{DynamicResource SshTab}" Tag="&#xE756;">
+                        <ScrollViewer x:Name="SshTerminalScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <Grid MinHeight="{Binding ViewportHeight, ElementName=SshTerminalScrollViewer}">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                            <StackPanel Margin="14,14,14,10">
+                                <StackPanel x:Name="SshAuthenticationPanel" Margin="0,0,0,8">
+                                    <TextBlock Text="{DynamicResource OptionalPrivateKey}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4" />
+                                    <DockPanel>
+                                        <Button x:Name="SelectSshKeyButton" Content="{DynamicResource SelectKey}" Tag="&#xE8D7;" DockPanel.Dock="Right"
+                                                Click="SelectSshKeyButton_Click" />
+                                        <TextBox x:Name="SshKeyPathInput" Height="36" VerticalContentAlignment="Center" Padding="8,0" />
+                                    </DockPanel>
+                                    <DockPanel Margin="0,8,0,0">
+                                        <TextBlock Text="{DynamicResource KeyPassphrase}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                        <PasswordBox x:Name="SshPassphraseInput" Height="36" Padding="8,0" AutomationProperties.Name="{DynamicResource SshKeyPassphraseAutomation}" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <Button x:Name="SshToggleButton" Content="{DynamicResource ConnectSsh}" Tag="&#xE8D4;" IsEnabled="False" DockPanel.Dock="Right" Click="SshToggleButton_Click" />
+                                    <Button x:Name="SshPasteButton" Content="{DynamicResource Paste}" Tag="&#xE77F;" IsEnabled="False" DockPanel.Dock="Right" Margin="0,0,8,0" Click="SshPasteButton_Click" />
+                                </DockPanel>
+                                <TextBlock x:Name="SshStatusText" Text="{DynamicResource LoginForSsh}"
+                                           Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" />
+                            </StackPanel>
+                            <local:SshTerminalView x:Name="SshTerminal" Grid.Row="1" Margin="14,0,14,14" AutomationProperties.Name="{DynamicResource SshTerminalAutomation}" />
+                        </Grid>
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" Padding="8,6" Margin="0,8,0,0">
+            <TextBlock x:Name="StatusText" Text="{DynamicResource DefaultStatus}"
+                       TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
+        </Border>
+    </Grid>
+</Window>
