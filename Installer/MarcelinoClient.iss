@@ -39,6 +39,7 @@ Name: "startup"; Description: "Iniciar com o Windows (na bandeja)"; Flags: unche
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
+Source: "..\MarcelinoClient\license\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{userprograms}\Marcelino Client"; Filename: "{app}\MarcelinoClient.exe"; WorkingDir: "{app}"
