@@ -160,8 +160,28 @@
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="{DynamicResource Password}" FontWeight="SemiBold" FontSize="12" />
-                                <PasswordBox x:Name="PasswordInput" Height="36" Margin="0,6,0,14" Padding="8,0"
-                                             KeyDown="PasswordInput_KeyDown" />
+                                <Border Height="36" Margin="0,6,0,14" BorderThickness="1"
+                                        BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource InputBrush}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="34" />
+                                        </Grid.ColumnDefinitions>
+                                        <PasswordBox x:Name="PasswordInput" Padding="8,0" BorderThickness="0"
+                                                     AutomationProperties.Name="{DynamicResource Password}"
+                                                     PasswordChanged="PasswordInput_PasswordChanged" KeyDown="PasswordInput_KeyDown" />
+                                        <TextBox x:Name="RevealedPasswordInput" Visibility="Collapsed" Padding="8,0" BorderThickness="0"
+                                                 VerticalContentAlignment="Center" IsUndoEnabled="False" SpellCheck.IsEnabled="False"
+                                                 IsEnabled="{Binding IsEnabled, ElementName=PasswordInput}"
+                                                 AutomationProperties.Name="{DynamicResource Password}"
+                                                 TextChanged="RevealedPasswordInput_TextChanged" KeyDown="PasswordInput_KeyDown" />
+                                        <Button x:Name="PasswordVisibilityButton" Grid.Column="1" Style="{StaticResource CaptionButtonStyle}"
+                                                Content="" Tag="&#xE890;" VerticalAlignment="Center"
+                                                IsEnabled="{Binding IsEnabled, ElementName=PasswordInput}"
+                                                ToolTip="{DynamicResource ShowPassword}" AutomationProperties.Name="{DynamicResource ShowPassword}"
+                                                Click="PasswordVisibilityButton_Click" />
+                                    </Grid>
+                                </Border>
                             </StackPanel>
                         </Grid>
                         <Button x:Name="ConnectButton" Content="{DynamicResource ValidateConnect}" Tag="&#xE8D4;" Height="40" Margin="0,20,0,0"
@@ -340,6 +360,42 @@
                                            VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" />
                             </DockPanel>
                             <ListView x:Name="SharesList" Grid.Row="1" MouseDoubleClick="SharesList_MouseDoubleClick">
+                                <ListView.Resources>
+                                    <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GridViewColumnHeader">
+                                                    <Border x:Name="HeaderBorder" Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <Grid>
+                                                            <ContentPresenter ContentSource="Content" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                              VerticalAlignment="Center" RecognizesAccessKey="True" />
+                                                            <Thumb x:Name="PART_HeaderGripper" Width="8" HorizontalAlignment="Right" Cursor="SizeWE" Background="Transparent">
+                                                                <Thumb.Template>
+                                                                    <ControlTemplate TargetType="Thumb">
+                                                                        <Border Background="Transparent" Padding="4,0">
+                                                                            <Border Width="1" Background="{DynamicResource BorderBrush}" />
+                                                                        </Border>
+                                                                    </ControlTemplate>
+                                                                </Thumb.Template>
+                                                            </Thumb>
+                                                        </Grid>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource HoverBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource SelectedTextBrush}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListView.Resources>
                                 <ListView.View>
                                     <GridView><GridViewColumn Header="{DynamicResource Share}" DisplayMemberBinding="{Binding}" Width="420" /></GridView>
                                 </ListView.View>
@@ -431,12 +487,17 @@
                                         <PasswordBox x:Name="SshPassphraseInput" Height="36" Padding="8,0" AutomationProperties.Name="{DynamicResource SshKeyPassphraseAutomation}" />
                                     </DockPanel>
                                 </StackPanel>
-                                <DockPanel LastChildFill="False">
-                                    <Button x:Name="SshToggleButton" Content="{DynamicResource ConnectSsh}" Tag="&#xE8D4;" IsEnabled="False" DockPanel.Dock="Right" Click="SshToggleButton_Click" />
-                                    <Button x:Name="SshPasteButton" Content="{DynamicResource Paste}" Tag="&#xE77F;" IsEnabled="False" DockPanel.Dock="Right" Margin="0,0,8,0" Click="SshPasteButton_Click" />
-                                </DockPanel>
-                                <TextBlock x:Name="SshStatusText" Text="{DynamicResource LoginForSsh}"
-                                           Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="SshStatusText" Text="{DynamicResource LoginForSsh}"
+                                               Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <Button x:Name="SshPasteButton" Grid.Column="1" Content="{DynamicResource Paste}" Tag="&#xE77F;" IsEnabled="False" Margin="0,0,8,0" Click="SshPasteButton_Click" />
+                                    <Button x:Name="SshToggleButton" Grid.Column="2" Content="{DynamicResource ConnectSsh}" Tag="&#xE8D4;" IsEnabled="False" Click="SshToggleButton_Click" />
+                                </Grid>
                             </StackPanel>
                             <local:SshTerminalView x:Name="SshTerminal" Grid.Row="1" Margin="14,0,14,14" AutomationProperties.Name="{DynamicResource SshTerminalAutomation}" />
                         </Grid>
@@ -446,7 +507,8 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" Padding="8,6" Margin="0,8,0,0">
+        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" Padding="8,6" Margin="0,8,0,0"
+            Visibility="{Binding Visibility, ElementName=LoginView}">
             <TextBlock x:Name="StatusText" Text="{DynamicResource DefaultStatus}"
                        TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" />
         </Border>

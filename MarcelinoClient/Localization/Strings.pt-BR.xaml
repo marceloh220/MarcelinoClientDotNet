@@ -16,6 +16,8 @@
     <sys:String x:Key="OptionalDomain">Domínio (opcional)</sys:String>
     <sys:String x:Key="Username">Usuário</sys:String>
     <sys:String x:Key="Password">Senha</sys:String>
+    <sys:String x:Key="ShowPassword">Revelar senha</sys:String>
+    <sys:String x:Key="HidePassword">Ocultar senha</sys:String>
     <sys:String x:Key="ValidateConnect">Validar e conectar</sys:String>
     <sys:String x:Key="SystemTab">Sistema</sys:String>
     <sys:String x:Key="ServerSummary">Resumo do servidor</sys:String>

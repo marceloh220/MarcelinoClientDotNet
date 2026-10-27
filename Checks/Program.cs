@@ -367,11 +367,39 @@ internal static class Program
         var window = new MainWindow(new ClientSettingsStore(Path.Combine(settingsDirectory, "settings.json")));
         try
         {
+            window.Show();
+            var passwordInput = (PasswordBox)window.FindName("PasswordInput");
+            var revealedPassword = (TextBox)window.FindName("RevealedPasswordInput");
+            var passwordVisibilityButton = (Button)window.FindName("PasswordVisibilityButton");
+            Check(passwordInput.Visibility == Visibility.Visible && revealedPassword.Visibility == Visibility.Collapsed,
+                "Login password is hidden by default");
+            passwordInput.Password = "reveal-check";
+            passwordVisibilityButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Check(revealedPassword.Visibility == Visibility.Visible && passwordInput.Visibility == Visibility.Collapsed &&
+                revealedPassword.Text == "reveal-check", "Login password eye reveals the entered password");
+            revealedPassword.Text = "edited-check";
+            Check(passwordInput.Password == "edited-check", "Visible password edits update login credentials");
+            passwordVisibilityButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Check(passwordInput.Visibility == Visibility.Visible && revealedPassword.Visibility == Visibility.Collapsed &&
+                revealedPassword.Text.Length == 0 && passwordInput.Password == "edited-check",
+                "Hiding password preserves credentials and clears plaintext field");
+            var passwordContainer = (FrameworkElement)passwordVisibilityButton.Parent;
+            var eyeBounds = passwordVisibilityButton.TransformToAncestor(passwordContainer)
+                .TransformBounds(new Rect(passwordVisibilityButton.RenderSize));
+            Check(eyeBounds.Right <= passwordContainer.ActualWidth &&
+                passwordContainer.ActualWidth - eyeBounds.Right <= 2 &&
+                eyeBounds.Left >= passwordInput.ActualWidth,
+                "Password eye fits inside the input at the right without overlapping text");
+            passwordInput.Clear();
+            var loginStatusBar = (FrameworkElement)((FrameworkElement)window.FindName("StatusText")).Parent;
             ((FrameworkElement)window.FindName("LoginView")).Visibility = Visibility.Collapsed;
             var mainView = (FrameworkElement)window.FindName("MainView");
             mainView.Visibility = Visibility.Visible;
             mainView.DataContext = status;
-            window.Show();
+            window.UpdateLayout();
+            Check(loginStatusBar.Visibility == Visibility.Collapsed &&
+                ((Grid)loginStatusBar.Parent).RowDefinitions[Grid.GetRow(loginStatusBar)].ActualHeight == 0,
+                "Successful login hides status bar and reclaims its layout space");
             CheckWindowWorkArea(window, "Initial borderless window fits monitor work area");
             window.Width = window.MinWidth;
             window.Height = window.MinHeight;
@@ -581,6 +609,29 @@ internal static class Program
             var pixels = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4];
             bitmap.CopyPixels(pixels, bitmap.PixelWidth * 4, 0);
             Check(pixels.Where((_, index) => index % 4 != 3).Any(value => value > 0), "SSH terminal renders nonblank output");
+            terminal.Reset();
+            terminal.Feed(Encoding.UTF8.GetBytes("\u001b[2J\u001b[H" + new string('\u28ff', 40) +
+                "\u001b[42m \u001b[0m\r\n" + new string('\u2500', 40) +
+                "\u001b[42m \u001b[0m\r\n\u001b[1m" + string.Concat(Enumerable.Repeat("a\u0301", 40)) +
+                "\u001b[42m \u001b[0m"));
+            var terminalDrawing = new DrawingGroup();
+            using (var drawing = terminalDrawing.Open())
+            {
+                typeof(SshTerminalView).GetMethod("OnRender",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .Invoke(terminal, [drawing]);
+            }
+
+            var markerCells = terminalDrawing.Children.OfType<GeometryDrawing>()
+                .Where(entry => entry.Brush is SolidColorBrush brush && brush.Color.G > 0 &&
+                    brush.Color.R == 0 && brush.Color.B == 0).ToArray();
+            var cellWidth = new FormattedText("M", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface("Consolas"), 13, Brushes.White, VisualTreeHelper.GetDpi(terminal).PixelsPerDip)
+                .WidthIncludingTrailingWhitespace;
+            Check(markerCells.Length == 3 && markerCells.All(entry =>
+                Math.Abs(entry.Bounds.X - (8 + 40 * cellWidth)) < 0.01 &&
+                Math.Abs(entry.Bounds.Width - cellWidth) < 0.01),
+                "SSH terminal aligns Braille, box drawing and bold combining text to fixed cells");
             var authenticationPanel = (FrameworkElement)window.FindName("SshAuthenticationPanel");
             var setSshControls = typeof(MainWindow).GetMethod("SetSshControls",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
@@ -608,7 +659,15 @@ internal static class Program
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
             transferCancellationField.SetValue(window, backupCancellation);
             ((TextBox)window.FindName("BackupLog")).Text = "Previous backup output";
+            passwordInput.Password = "logout-check";
+            passwordVisibilityButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             ((Button)window.FindName("DisconnectButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            window.UpdateLayout();
+            Check(passwordInput.Password.Length == 0 && revealedPassword.Text.Length == 0 &&
+                revealedPassword.Visibility == Visibility.Collapsed && passwordInput.Visibility == Visibility.Visible,
+                "Logout clears both password fields and restores hidden mode");
+            Check(loginStatusBar.Visibility == Visibility.Visible && loginStatusBar.ActualHeight > 0,
+                "Server logout restores login status bar");
             Check(backupCancellation.IsCancellationRequested && ((TextBox)window.FindName("BackupLog")).Text.Length == 0 &&
                 ((DataGrid)window.FindName("RemoteEntriesGrid")).Items.Count == 0,
                 "Server logout cancels backup and clears remote browser/log");

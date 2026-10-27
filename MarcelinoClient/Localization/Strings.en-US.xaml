@@ -16,6 +16,8 @@
     <sys:String x:Key="OptionalDomain">Domain (optional)</sys:String>
     <sys:String x:Key="Username">Username</sys:String>
     <sys:String x:Key="Password">Password</sys:String>
+    <sys:String x:Key="ShowPassword">Show password</sys:String>
+    <sys:String x:Key="HidePassword">Hide password</sys:String>
     <sys:String x:Key="ValidateConnect">Validate and connect</sys:String>
     <sys:String x:Key="SystemTab">System</sys:String>
     <sys:String x:Key="ServerSummary">Server summary</sys:String>

@@ -85,29 +85,36 @@ public sealed class SshTerminalView : FrameworkElement
         var lines = _terminal.GetPageSpans(_terminal.ViewPort.TopRow, Rows, Columns);
         for (var row = 0; row < lines.Count; row++)
         {
-            var offset = 0d;
+            var column = 0;
             foreach (var span in lines[row].Spans)
             {
-                var text = Format(span.Text, ColorBrush(span.ForgroundColor));
-                if (span.Bold)
+                var elements = StringInfo.GetTextElementEnumerator(span.Text);
+                while (elements.MoveNext())
                 {
-                    text.SetFontWeight(FontWeights.Bold);
-                }
+                    var text = Format(elements.GetTextElement(), ColorBrush(span.ForgroundColor));
+                    if (span.Bold)
+                    {
+                        text.SetFontWeight(FontWeights.Bold);
+                    }
 
-                if (span.Underline)
-                {
-                    text.SetTextDecorations(TextDecorations.Underline);
-                }
+                    if (span.Underline)
+                    {
+                        text.SetTextDecorations(TextDecorations.Underline);
+                    }
 
-                var origin = new Point(Padding + offset, Padding + row * LineHeight);
-                drawingContext.DrawRectangle(ColorBrush(span.BackgroundColor), null,
-                    new Rect(origin, new Size(text.WidthIncludingTrailingWhitespace, LineHeight)));
-                if (!span.Hidden)
-                {
-                    drawingContext.DrawText(text, origin);
-                }
+                    var origin = new Point(Padding + column * cellWidth, Padding + row * LineHeight);
+                    drawingContext.DrawRectangle(ColorBrush(span.BackgroundColor), null,
+                        new Rect(origin, new Size(cellWidth, LineHeight)));
+                    if (!span.Hidden && text.WidthIncludingTrailingWhitespace > 0)
+                    {
+                        drawingContext.PushTransform(new ScaleTransform(
+                            cellWidth / text.WidthIncludingTrailingWhitespace, 1, origin.X, origin.Y));
+                        drawingContext.DrawText(text, origin);
+                        drawingContext.Pop();
+                    }
 
-                offset += text.WidthIncludingTrailingWhitespace;
+                    column++;
+                }
             }
         }
 

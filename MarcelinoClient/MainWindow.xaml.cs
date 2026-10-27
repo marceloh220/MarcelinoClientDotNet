@@ -128,6 +128,50 @@ public partial class MainWindow : Window
         }
     }
 
+    private void PasswordInput_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (RevealedPasswordInput is not null && RevealedPasswordInput.Visibility == Visibility.Visible &&
+            RevealedPasswordInput.Text != PasswordInput.Password)
+        {
+            RevealedPasswordInput.Text = PasswordInput.Password;
+        }
+    }
+
+    private void RevealedPasswordInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (RevealedPasswordInput.Visibility == Visibility.Visible && PasswordInput.Password != RevealedPasswordInput.Text)
+        {
+            PasswordInput.Password = RevealedPasswordInput.Text;
+        }
+    }
+
+    private void SetLoginPasswordVisibility(bool revealed)
+    {
+        RevealedPasswordInput.Visibility = Visibility.Collapsed;
+        RevealedPasswordInput.Text = revealed ? PasswordInput.Password : "";
+        PasswordInput.Visibility = revealed ? Visibility.Collapsed : Visibility.Visible;
+        RevealedPasswordInput.Visibility = revealed ? Visibility.Visible : Visibility.Collapsed;
+        PasswordVisibilityButton.Tag = revealed ? "\uED1A" : "\uE890";
+        var resource = revealed ? "HidePassword" : "ShowPassword";
+        PasswordVisibilityButton.SetResourceReference(ToolTipProperty, resource);
+        PasswordVisibilityButton.SetResourceReference(System.Windows.Automation.AutomationProperties.NameProperty, resource);
+    }
+
+    private void PasswordVisibilityButton_Click(object sender, RoutedEventArgs e)
+    {
+        var revealed = RevealedPasswordInput.Visibility != Visibility.Visible;
+        SetLoginPasswordVisibility(revealed);
+        if (revealed)
+        {
+            RevealedPasswordInput.Focus();
+            RevealedPasswordInput.CaretIndex = RevealedPasswordInput.Text.Length;
+        }
+        else
+        {
+            PasswordInput.Focus();
+        }
+    }
+
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
     {
         SaveClientSettings();
@@ -174,6 +218,7 @@ public partial class MainWindow : Window
             SharesSummary.Text = Localization.Get("ShareCount", visibleShares.Length);
             SetSshAuthentication(username, password);
             PasswordInput.Clear();
+            SetLoginPasswordVisibility(false);
             MainTabs.SelectedIndex = 0;
             SetStatus(visibleShares.Length == 0
                 ? Localization.Get("NoDiskShares")
@@ -228,6 +273,7 @@ public partial class MainWindow : Window
         MainView.Visibility = Visibility.Collapsed;
         LoginView.Visibility = Visibility.Visible;
         PasswordInput.Clear();
+        SetLoginPasswordVisibility(false);
         DisconnectButton.IsEnabled = false;
         SetStatus(message);
     }
