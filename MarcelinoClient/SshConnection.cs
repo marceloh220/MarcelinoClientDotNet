@@ -11,13 +11,14 @@ public sealed record SshHostKey(string Host, string Algorithm, string Fingerprin
 
 public sealed class SshHostKeyStore(string path)
 {
-    public bool Verify(string host, string algorithm, byte[] key, Func<SshHostKey, bool> confirm)
+    public bool Verify(string host, int port, string algorithm, byte[] key, Func<SshHostKey, bool> confirm)
     {
         var entries = File.Exists(path)
             ? JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path))
                 ?? throw new InvalidDataException(Localization.Get("InvalidSshKeyStore"))
             : new Dictionary<string, string>();
-        var identity = host.ToLowerInvariant();
+        var normalizedHost = host.ToLowerInvariant();
+        var identity = port == 22 ? normalizedHost : $"{normalizedHost}:{port}";
         var value = $"{algorithm} {Convert.ToBase64String(key)}";
         if (entries.TryGetValue(identity, out var known))
         {
@@ -70,8 +71,29 @@ public sealed class SshConnection : IDisposable
         _privateKey = privateKey;
     }
 
-    public static Task<SshConnection> ConnectAsync(string host, string username, string password,
+    public static async Task<SshConnection> ConnectAsync(string host, int port, string username, string password,
         string keyPath, string passphrase, int columns, int rows, SshHostKeyStore hostKeys,
+        Func<SshHostKey, bool> confirm, CancellationToken cancellationToken)
+    {
+        var (client, privateKey) = await ConnectClientAsync(host, port, username, password, keyPath, passphrase,
+            hostKeys, confirm, cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var shell = client.CreateShellStream("xterm-256color", (uint)columns, (uint)rows, 0, 0, 32768);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new SshConnection(client, shell, privateKey);
+        }
+        catch
+        {
+            client.Dispose();
+            privateKey?.Dispose();
+            throw;
+        }
+    }
+
+    internal static Task<(SshClient Client, PrivateKeyFile? PrivateKey)> ConnectClientAsync(string host, int port,
+        string username, string password, string keyPath, string passphrase, SshHostKeyStore hostKeys,
         Func<SshHostKey, bool> confirm, CancellationToken cancellationToken) => Task.Run(async () =>
     {
         PrivateKeyFile? privateKey = null;
@@ -87,25 +109,18 @@ public sealed class SshConnection : IDisposable
             }
 
             methods.Add(new PasswordAuthenticationMethod(username, password));
-            var info = new ConnectionInfo(host, 22, username, methods.ToArray()) { Timeout = TimeSpan.FromSeconds(8) };
+            var info = new ConnectionInfo(host, port, username, methods.ToArray()) { Timeout = TimeSpan.FromSeconds(8) };
             client = new SshClient(info) { KeepAliveInterval = TimeSpan.FromSeconds(20) };
             client.HostKeyReceived += (_, args) =>
             {
                 args.CanTrust = false;
                 cancellationToken.ThrowIfCancellationRequested();
-                args.CanTrust = hostKeys.Verify(host, args.HostKeyName, args.HostKey, key =>
+                args.CanTrust = hostKeys.Verify(host, port, args.HostKeyName, args.HostKey, key =>
                     !cancellationToken.IsCancellationRequested && confirm(key) && !cancellationToken.IsCancellationRequested);
             };
             await client.ConnectAsync(cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            var shell = client.CreateShellStream("xterm-256color", (uint)columns, (uint)rows, 0, 0, 32768);
-            if (cancellationToken.IsCancellationRequested)
-            {
-                shell.Dispose();
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            return new SshConnection(client, shell, privateKey);
+            return (client, privateKey);
         }
         catch
         {

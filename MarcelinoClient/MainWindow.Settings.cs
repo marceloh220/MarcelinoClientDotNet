@@ -1,4 +1,5 @@
 using System.IO;
+using System.Globalization;
 using System.Security;
 using System.Text.Json;
 using System.Windows.Controls;
@@ -25,13 +26,17 @@ public partial class MainWindow
             }
 
             SshKeyPathInput.Text = _clientSettings.SshKeyPath;
+            SshPortInput.Text = _clientSettings.SshPort == 22 ? "" : _clientSettings.SshPort.ToString(CultureInfo.InvariantCulture);
+            SshRemotePortInput.Text = _clientSettings.SshRemotePort == 0 ? "" : _clientSettings.SshRemotePort.ToString(CultureInfo.InvariantCulture);
+            SshLocalPortInput.Text = _clientSettings.SshLocalPort == 0 ? "" : _clientSettings.SshLocalPort.ToString(CultureInfo.InvariantCulture);
             ThemeSelector.SelectedIndex = _clientSettings.Theme == "dark" ? 1 : 0;
             LanguageSelector.ItemsSource = Localization.Languages;
             LanguageSelector.SelectedValue = _clientSettings.Language;
             Localization.Apply(_clientSettings.Language);
             RefreshLocalizedTableHeaders();
             _settingsReady = true;
-            foreach (var input in new[] { HostInput, UsernameInput, DomainInput, SshKeyPathInput })
+            foreach (var input in new[] { HostInput, UsernameInput, DomainInput, SshKeyPathInput,
+                SshPortInput, SshRemotePortInput, SshLocalPortInput })
             {
                 input.LostKeyboardFocus += (_, _) => SaveClientSettings();
             }
@@ -56,6 +61,21 @@ public partial class MainWindow
         _clientSettings.Domain = DomainInput.Text.Trim();
         _clientSettings.Sources = BackupSourcesList.Items.Cast<string>().ToArray();
         _clientSettings.SshKeyPath = SshKeyPathInput.Text.Trim();
+        if (TryParsePort(SshPortInput.Text, 22, allowDefault: true, out var sshPort))
+        {
+            _clientSettings.SshPort = sshPort;
+        }
+
+        if (TryParseOptionalPort(SshRemotePortInput.Text, out var sshRemotePort))
+        {
+            _clientSettings.SshRemotePort = sshRemotePort;
+        }
+
+        if (TryParseOptionalPort(SshLocalPortInput.Text, out var sshLocalPort))
+        {
+            _clientSettings.SshLocalPort = sshLocalPort;
+        }
+
         _clientSettings.Theme = ThemeSelector.SelectedIndex == 1 ? "dark" : "light";
         _clientSettings.Language = LanguageSelector.SelectedValue?.ToString() ?? "pt-BR";
         try

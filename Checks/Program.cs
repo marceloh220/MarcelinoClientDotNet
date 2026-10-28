@@ -153,7 +153,8 @@ internal static class Program
         var store = new ClientSettingsStore(path);
         try
         {
-            Check(store.Load().Theme == "light" && store.Load().Language == "pt-BR" && !File.Exists(path),
+            Check(store.Load().Theme == "light" && store.Load().Language == "pt-BR" && store.Load().SshPort == 22 &&
+                store.Load().SshRemotePort == 0 && store.Load().SshLocalPort == 0 && !File.Exists(path),
                 "Missing settings use defaults without creating a file");
             Directory.CreateDirectory(directory);
             File.WriteAllText(path, """{"server":{"ip":"nas-check","name":"NAS","selection":"NAS (nas-check)"},"username":"sample","sources":["C:\\Data",null,2,"c:\\data"],"theme":"dark","status_interval_seconds":30}""");
@@ -162,17 +163,25 @@ internal static class Program
                 "Python settings loaded and invalid source entries ignored");
             settings.Domain = "WORKGROUP";
             settings.SshKeyPath = "C:\\Keys\\id_ed25519";
+            settings.SshPort = 2222;
+            settings.SshRemotePort = 8080;
+            settings.SshLocalPort = 3306;
             settings.Destination = SavedBackupDestination.FromPath("nas-check", "\\\\nas-check\\Data\\Backups");
             store.Save(settings);
             var restored = store.Load();
             Check(restored.Server == settings.Server && restored.Username == settings.Username && restored.Domain == settings.Domain &&
                 restored.SshKeyPath == settings.SshKeyPath && restored.Destination == settings.Destination && restored.Theme == settings.Theme &&
-                restored.Language == settings.Language,
+                restored.Language == settings.Language && restored.SshPort == settings.SshPort &&
+                restored.SshRemotePort == settings.SshRemotePort && restored.SshLocalPort == settings.SshLocalPort,
                 "All requested preferences survive save/reload");
             using (var json = JsonDocument.Parse(File.ReadAllText(path)))
             {
                 Check(json.RootElement.GetProperty("status_interval_seconds").GetInt32() == 30 &&
                     json.RootElement.GetProperty("server").GetProperty("name").GetString() == "NAS", "Unrelated Python settings preserved");
+                Check(json.RootElement.GetProperty("ssh_port").GetInt32() == 2222 &&
+                    json.RootElement.GetProperty("ssh_remote_port").GetInt32() == 8080 &&
+                    json.RootElement.GetProperty("ssh_local_port").GetInt32() == 3306,
+                    "SSH and tunnel ports are stored as numbers");
                 Check(!json.RootElement.TryGetProperty("password", out _) && !json.RootElement.TryGetProperty("passphrase", out _),
                     "Settings contain no password or passphrase fields");
             }
@@ -299,13 +308,16 @@ internal static class Program
         var key = new byte[] { 1, 2, 3, 4 };
         try
         {
-            Check(!store.Verify("nas-check", "ssh-ed25519", key, _ => false) && !File.Exists(path), "Unknown SSH key denied without persistence");
-            Check(store.Verify("nas-check", "ssh-ed25519", key, host => host.Fingerprint.StartsWith("SHA256:")), "SSH key confirmation");
+            Check(!store.Verify("nas-check", 22, "ssh-ed25519", key, _ => false) && !File.Exists(path), "Unknown SSH key denied without persistence");
+            Check(store.Verify("nas-check", 22, "ssh-ed25519", key, host => host.Fingerprint.StartsWith("SHA256:")), "SSH key confirmation");
+            Check(store.Verify("nas-check", 2222, "ssh-ed25519", [9, 8, 7], _ => true), "SSH host keys are scoped by port");
             var reloaded = new SshHostKeyStore(path);
-            Check(reloaded.Verify("NAS-CHECK", "ssh-ed25519", key, _ => throw new InvalidOperationException("Known host asked for trust.")), "SSH key pin persisted");
+            Check(reloaded.Verify("NAS-CHECK", 22, "ssh-ed25519", key, _ => throw new InvalidOperationException("Known host asked for trust.")), "SSH key pin persisted");
+            Check(reloaded.Verify("nas-check", 2222, "ssh-ed25519", [9, 8, 7], _ => throw new InvalidOperationException("Known host/port asked for trust.")),
+                "SSH host key pin persisted for custom port");
             try
             {
-                store.Verify("nas-check", "ssh-ed25519", [9, 8, 7], _ => throw new InvalidOperationException("Changed key asked for trust."));
+                store.Verify("nas-check", 22, "ssh-ed25519", [9, 8, 7], _ => throw new InvalidOperationException("Changed key asked for trust."));
                 throw new InvalidOperationException("Changed host key accepted.");
             }
             catch (Renci.SshNet.Common.SshConnectionException)
@@ -316,7 +328,7 @@ internal static class Program
             File.WriteAllText(path, "{");
             try
             {
-                store.Verify("other-host", "ssh-ed25519", key, _ => throw new InvalidOperationException("Corrupt trust store ignored."));
+                store.Verify("other-host", 22, "ssh-ed25519", key, _ => throw new InvalidOperationException("Corrupt trust store ignored."));
                 throw new InvalidOperationException("Corrupt trust store accepted.");
             }
             catch (JsonException)
@@ -328,7 +340,7 @@ internal static class Program
             cancelled.Cancel();
             try
             {
-                SshConnection.ConnectAsync("127.0.0.1", "unused", "unused", "", "", 80, 24, store,
+                SshConnection.ConnectAsync("127.0.0.1", 22, "unused", "unused", "", "", 80, 24, store,
                     _ => throw new InvalidOperationException("Cancelled connection asked for trust."), cancelled.Token).GetAwaiter().GetResult();
                 throw new InvalidOperationException("Cancelled SSH connection succeeded.");
             }
@@ -339,7 +351,7 @@ internal static class Program
 
             try
             {
-                SshConnection.ConnectAsync("127.0.0.1", "unused", "unused", Path.Combine(directory, "missing-key"), "", 80, 24,
+                SshConnection.ConnectAsync("127.0.0.1", 22, "unused", "unused", Path.Combine(directory, "missing-key"), "", 80, 24,
                     store, _ => false, CancellationToken.None).GetAwaiter().GetResult();
                 throw new InvalidOperationException("Missing SSH private key accepted.");
             }
@@ -446,7 +458,8 @@ internal static class Program
             Check(tabs.Items.Cast<TabItem>().All(tab => tab.Tag is string { Length: > 0 } glyph &&
                 iconFont.CharacterToGlyphMap.ContainsKey(char.ConvertToUtf32(glyph, 0))), "All tab icons exist in the Windows font");
             foreach (var name in new[] { "DisconnectButton", "ScanButton", "ConnectButton", "RemoteUpButton", "RefreshRemoteButton",
-                "StartBackupButton", "RestoreBackupButton", "CancelTransferButton", "SelectSshKeyButton", "SshToggleButton", "SshPasteButton" })
+                "StartBackupButton", "RestoreBackupButton", "CancelTransferButton", "SelectSshKeyButton", "SshToggleButton",
+                "SshTunnelToggleButton", "SshPasteButton" })
             {
                 var button = (Button)window.FindName(name);
                 Check(button.Tag is string { Length: > 0 } glyph && iconFont.CharacterToGlyphMap.ContainsKey(char.ConvertToUtf32(glyph, 0)),
@@ -461,6 +474,8 @@ internal static class Program
                 window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                 var background = ((SolidColorBrush)window.Background).Color;
                 Check(themeIndex == 1 ? background != lightBackground : background == lightBackground, "Theme switch " + themeIndex);
+                Check(((SolidColorBrush)((Button)window.FindName("SshToggleButton")).Background).Color ==
+                    ((SolidColorBrush)window.FindResource("ConnectBrush")).Color, "SSH connect button follows theme " + themeIndex);
                 Check(((SolidColorBrush)hostInput.Background).Color == ((SolidColorBrush)window.FindResource("InputBrush")).Color,
                     "Input theme " + themeIndex);
                 tabs.SelectedIndex = 0;
@@ -633,14 +648,33 @@ internal static class Program
                 Math.Abs(entry.Bounds.Width - cellWidth) < 0.01),
                 "SSH terminal aligns Braille, box drawing and bold combining text to fixed cells");
             var authenticationPanel = (FrameworkElement)window.FindName("SshAuthenticationPanel");
+            var terminalActionsPanel = (FrameworkElement)window.FindName("SshTerminalActionsPanel");
+            var tunnelControlsPanel = (Grid)window.FindName("SshTunnelControlsPanel");
+            var sshPortInput = (TextBox)window.FindName("SshPortInput");
+            var remotePortInput = (TextBox)window.FindName("SshRemotePortInput");
+            var localPortInput = (TextBox)window.FindName("SshLocalPortInput");
+            var tunnelButton = (Button)window.FindName("SshTunnelToggleButton");
+            var remotePortLabel = (TextBlock)window.FindName("SshRemotePortLabelText");
+            var localPortLabel = (TextBlock)window.FindName("SshLocalPortLabelText");
+            var tunnelConnectContent = tunnelButton.Content;
+            Check(Grid.GetColumn(sshPortInput) == 0 && Grid.GetColumn(remotePortInput) == 1 &&
+                Grid.GetColumn(localPortInput) == 2 && Grid.GetColumn(tunnelButton) == 3 && tunnelControlsPanel.IsVisible &&
+                !string.IsNullOrWhiteSpace(remotePortLabel.Text) && !string.IsNullOrWhiteSpace(localPortLabel.Text),
+                "SSH tunnel controls are ordered SSH, remote, local, connect");
             var setSshControls = typeof(MainWindow).GetMethod("SetSshControls",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-            setSshControls.Invoke(window, [true, false]);
-            Check(authenticationPanel.Visibility == Visibility.Visible && !((TextBox)window.FindName("SshKeyPathInput")).IsEnabled,
+            setSshControls.Invoke(window, [true, false, false, false]);
+            Check(authenticationPanel.Visibility == Visibility.Visible && !((TextBox)window.FindName("SshKeyPathInput")).IsEnabled &&
+                ((SolidColorBrush)((Button)window.FindName("SshToggleButton")).Background).Color ==
+                ((SolidColorBrush)window.FindResource("ConnectBrush")).Color,
                 "SSH authentication visible but disabled while connecting");
-            setSshControls.Invoke(window, [false, true]);
+            setSshControls.Invoke(window, [false, true, false, false]);
             window.UpdateLayout();
-            Check(authenticationPanel.Visibility == Visibility.Collapsed && ((Button)window.FindName("SshPasteButton")).IsVisible,
+            Check(authenticationPanel.Visibility == Visibility.Collapsed && tunnelControlsPanel.Visibility == Visibility.Collapsed &&
+                terminalActionsPanel.IsVisible &&
+                ((Button)window.FindName("SshPasteButton")).IsVisible &&
+                ((SolidColorBrush)((Button)window.FindName("SshToggleButton")).Background).Color ==
+                ((SolidColorBrush)window.FindResource("DisconnectBrush")).Color,
                 "SSH authentication hidden after connection, actions remain visible");
             var sshSession = new CancellationTokenSource();
             typeof(MainWindow).GetField("_sshSession", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
@@ -649,8 +683,26 @@ internal static class Program
             ((Button)window.FindName("SshToggleButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Check(string.IsNullOrWhiteSpace(terminal.ScreenText) && !terminal.IsConnected,
                 "SSH disconnect button clears terminal screen and connection state");
-            Check(authenticationPanel.Visibility == Visibility.Visible && ((TextBox)window.FindName("SshKeyPathInput")).IsEnabled,
+            Check(authenticationPanel.Visibility == Visibility.Visible && tunnelControlsPanel.Visibility == Visibility.Visible &&
+                ((TextBox)window.FindName("SshKeyPathInput")).IsEnabled,
                 "SSH authentication restored after disconnection");
+            setSshControls.Invoke(window, [false, false, true, false]);
+            Check(((SolidColorBrush)tunnelButton.Background).Color == ((SolidColorBrush)window.FindResource("ConnectBrush")).Color,
+                "SSH tunnel uses connect styling while connecting");
+            setSshControls.Invoke(window, [false, false, false, true]);
+            window.UpdateLayout();
+            Check(authenticationPanel.Visibility == Visibility.Collapsed && terminalActionsPanel.Visibility == Visibility.Collapsed &&
+                terminal.Visibility == Visibility.Collapsed && !Equals(tunnelButton.Content, tunnelConnectContent) &&
+                ((SolidColorBrush)tunnelButton.Background).Color == ((SolidColorBrush)window.FindResource("DisconnectBrush")).Color,
+                "Active SSH tunnel hides terminal actions and uses disconnect styling");
+            setSshControls.Invoke(window, [false, false, false, false]);
+            window.UpdateLayout();
+            Check(authenticationPanel.Visibility == Visibility.Visible && terminalActionsPanel.Visibility == Visibility.Visible &&
+                terminal.Visibility == Visibility.Visible && Equals(tunnelButton.Content, tunnelConnectContent) &&
+                ((SolidColorBrush)tunnelButton.Background).Color == ((SolidColorBrush)window.FindResource("ConnectBrush")).Color &&
+                ((SolidColorBrush)((Button)window.FindName("SshToggleButton")).Background).Color ==
+                ((SolidColorBrush)window.FindResource("ConnectBrush")).Color,
+                "Disconnected SSH controls restore the terminal and connect styling");
             terminal.IsConnected = true;
             terminal.Feed(Encoding.UTF8.GetBytes("sensitive session output"));
             ((PasswordBox)window.FindName("SshPassphraseInput")).Password = "temporary-check";
@@ -711,7 +763,8 @@ internal static class Program
         {
             Server = "nas-check", Username = "saved-user", Domain = "WORKGROUP", Sources = ["C:\\BackupSource"],
             Destination = new SavedBackupDestination("nas-check", "Data", "Backups"),
-            SshKeyPath = "C:\\Keys\\id_ed25519", Theme = "dark", Language = "pt-BR"
+            SshKeyPath = "C:\\Keys\\id_ed25519", SshPort = 2222, SshRemotePort = 8080, SshLocalPort = 3306,
+            Theme = "dark", Language = "pt-BR"
         });
         var window = new MainWindow(store);
         MainWindow? reopened = null;
@@ -722,6 +775,9 @@ internal static class Program
                 ((TextBox)window.FindName("DomainInput")).Text == "WORKGROUP", "WPF restores server/user/domain on startup");
             Check(((ComboBox)window.FindName("ThemeSelector")).SelectedIndex == 1 &&
                 ((TextBox)window.FindName("SshKeyPathInput")).Text == "C:\\Keys\\id_ed25519" &&
+                ((TextBox)window.FindName("SshPortInput")).Text == "2222" &&
+                ((TextBox)window.FindName("SshRemotePortInput")).Text == "8080" &&
+                ((TextBox)window.FindName("SshLocalPortInput")).Text == "3306" &&
                 ((ListBox)window.FindName("BackupSourcesList")).Items.Contains("C:\\BackupSource"), "WPF restores theme, SSH key and backup sources");
             var languageSelector = (ComboBox)window.FindName("LanguageSelector");
             languageSelector.SelectedValue = "en-US";
@@ -738,6 +794,12 @@ internal static class Program
                 "Monitor fields use selected language during background parsing");
             var hostField = typeof(MainWindow).GetField("_connectedHost", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
             hostField.SetValue(window, new SmbHost("nas-check", "NAS"));
+            typeof(MainWindow).GetMethod("SetBusy", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [false]);
+            var applicationDisconnectButton = (Button)window.FindName("DisconnectButton");
+            Check(((SolidColorBrush)applicationDisconnectButton.Background).Color ==
+                ((SolidColorBrush)window.FindResource("DisconnectBrush")).Color,
+                "Application disconnect button uses red styling while connected");
             typeof(MainWindow).GetMethod("SetSshAuthentication", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
                 .Invoke(window, ["saved-user", "check-password"]);
             var localizationType = typeof(MainWindow).Assembly.GetType("MarcelinoClient.Localization")!;
@@ -764,17 +826,29 @@ internal static class Program
             ((PasswordBox)window.FindName("SshPassphraseInput")).Password = "not-for-disk-either";
             ((Button)window.FindName("DisconnectButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Check(store.Load().Destination?.ForServer("nas-check") == "\\\\nas-check\\Data\\Backups", "Logout retains saved backup destination");
+            Check(((SolidColorBrush)applicationDisconnectButton.Background).Color ==
+                ((SolidColorBrush)window.FindResource("ConnectBrush")).Color,
+                "Application disconnect button returns to green after logout");
             ((TextBox)window.FindName("HostInput")).Text = "new-nas";
             ((TextBox)window.FindName("UsernameInput")).Text = "new-user";
             ((TextBox)window.FindName("SshKeyPathInput")).Text = "C:\\Keys\\new-key";
+            ((TextBox)window.FindName("SshPortInput")).Text = "2200";
+            ((TextBox)window.FindName("SshRemotePortInput")).Text = "9090";
+            ((TextBox)window.FindName("SshLocalPortInput")).Text = "4000";
             ((ListBox)window.FindName("BackupSourcesList")).Items.Add("C:\\AnotherSource");
             ((ComboBox)window.FindName("ThemeSelector")).SelectedIndex = 0;
-            Check(store.Load().Theme == "light", "Theme change persisted immediately");
+            typeof(MainWindow).GetMethod("SaveClientSettings", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, null);
+            Check(store.Load().Theme == "light" && store.Load().SshPort == 2200 && store.Load().SshRemotePort == 9090 &&
+                store.Load().SshLocalPort == 4000, "Theme and SSH ports persist immediately");
             window.Close();
             reopened = new MainWindow(store);
             Check(((TextBox)reopened.FindName("HostInput")).Text == "new-nas" &&
                 ((TextBox)reopened.FindName("UsernameInput")).Text == "new-user" &&
                 ((TextBox)reopened.FindName("SshKeyPathInput")).Text == "C:\\Keys\\new-key" &&
+                ((TextBox)reopened.FindName("SshPortInput")).Text == "2200" &&
+                ((TextBox)reopened.FindName("SshRemotePortInput")).Text == "9090" &&
+                ((TextBox)reopened.FindName("SshLocalPortInput")).Text == "4000" &&
                 ((ListBox)reopened.FindName("BackupSourcesList")).Items.Contains("C:\\AnotherSource") &&
                 ((ComboBox)reopened.FindName("ThemeSelector")).SelectedIndex == 0 &&
                 Equals(((ComboBox)reopened.FindName("LanguageSelector")).SelectedValue, "en-US") &&

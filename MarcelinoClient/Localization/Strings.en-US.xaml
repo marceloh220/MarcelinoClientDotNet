@@ -88,6 +88,10 @@
     <sys:String x:Key="IncrementalRestore">Incremental restore</sys:String>
     <sys:String x:Key="AwaitingTransfer">Waiting for transfer.</sys:String>
     <sys:String x:Key="SshTab">Terminal</sys:String>
+    <sys:String x:Key="SshPortLabel">SSH port (default: 22)</sys:String>
+    <sys:String x:Key="SshRemotePortLabel">Remote port</sys:String>
+    <sys:String x:Key="SshLocalPortLabel">Local port</sys:String>
+    <sys:String x:Key="SshTunnelLabel">SSH tunnel</sys:String>
     <sys:String x:Key="OptionalPrivateKey">Private key (optional)</sys:String>
     <sys:String x:Key="SelectKey">Select key...</sys:String>
     <sys:String x:Key="KeyPassphrase">Key passphrase</sys:String>
@@ -121,12 +125,22 @@
     <sys:String x:Key="ExplorerFailed">Could not open Explorer: {0}</sys:String>
     <sys:String x:Key="MetricsRestored">Monitor metrics reading restored.</sys:String>
     <sys:String x:Key="MetricsReadFailed">Connection closed: unable to access metrics. Check the marcelinoSrv metrics collection service and the Samba file-sharing service.</sys:String>
-    <sys:String x:Key="SshReady">Ready to connect to {0}@{1}:22.</sys:String>
+    <sys:String x:Key="SshReady">Ready to connect to {0}@{1}:{2}.</sys:String>
     <sys:String x:Key="SshLoginFirst">Log in before connecting via SSH.</sys:String>
-    <sys:String x:Key="SshConnecting">Connecting to {0}@{1}:22...</sys:String>
-    <sys:String x:Key="SshConnected">Connected: {0}@{1}:22</sys:String>
+    <sys:String x:Key="SshConnecting">Connecting to {0}@{1}:{2}...</sys:String>
+    <sys:String x:Key="SshConnected">Connected: {0}@{1}:{2}</sys:String>
+    <sys:String x:Key="InvalidSshPort">Enter an SSH port between 1 and 65535.</sys:String>
     <sys:String x:Key="SshConnectFailed">SSH connection failed: {0}</sys:String>
     <sys:String x:Key="SshDisconnected">SSH disconnected.</sys:String>
+    <sys:String x:Key="ConnectSshTunnel">Connect tunnel</sys:String>
+    <sys:String x:Key="SshCancelTunnel">Cancel tunnel</sys:String>
+    <sys:String x:Key="SshDisconnectTunnel">Disconnect tunnel</sys:String>
+    <sys:String x:Key="InvalidSshTunnelPorts">Enter remote and local ports between 1 and 65535.</sys:String>
+    <sys:String x:Key="SshTunnelConnecting">Creating local tunnel {0} to remote port {1}...</sys:String>
+    <sys:String x:Key="SshTunnelConnected">Tunnel active: 127.0.0.1:{0} to 127.0.0.1:{1}.</sys:String>
+    <sys:String x:Key="SshTunnelDisconnected">SSH tunnel disconnected.</sys:String>
+    <sys:String x:Key="SshTunnelCancelled">Tunnel creation canceled.</sys:String>
+    <sys:String x:Key="SshTunnelConnectFailed">Failed to create SSH tunnel: {0}</sys:String>
     <sys:String x:Key="RestoreFolderDialog">Restore to local folder</sys:String>
     <sys:String x:Key="ConfirmBackup">Send {0} folder(s) to:
 {1}
@@ -151,9 +165,9 @@ Existing local files may be replaced. Continue?</sys:String>
     <sys:String x:Key="SettingsSaveFailed">Could not save settings: {0}</sys:String>
     <sys:String x:Key="TrayStartupFailed">Could not change startup setting: {0}</sys:String>
     <sys:String x:Key="TrayUnavailable">Could not start the tray icon: {0}</sys:String>
-    <sys:String x:Key="TrustSshServer">Server: {0}:22
-Key: {1}
-Fingerprint: {2}
+    <sys:String x:Key="TrustSshServer">Server: {0}:{1}
+Key: {2}
+Fingerprint: {3}
 
 Verify this fingerprint with the administrator. Trust and save this key?</sys:String>
     <sys:String x:Key="TrustSshServerTitle">Trust SSH server</sys:String>

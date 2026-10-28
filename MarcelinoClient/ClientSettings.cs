@@ -46,6 +46,9 @@ public sealed class ClientSettings
     public string[] Sources { get; set; } = [];
     public SavedBackupDestination? Destination { get; set; }
     public string SshKeyPath { get; set; } = "";
+    public int SshPort { get; set; } = 22;
+    public int SshRemotePort { get; set; }
+    public int SshLocalPort { get; set; }
     public string Theme { get; set; } = "light";
     public string Language { get; set; } = "pt-BR";
 }
@@ -70,6 +73,9 @@ public sealed class ClientSettingsStore(string path)
             Destination = destination is null ? null : new SavedBackupDestination(
                 Text(destination["server"]), Text(destination["share"]), Text(destination["path"])),
             SshKeyPath = Text(root["ssh_key_path"]),
+            SshPort = Port(root["ssh_port"], 22),
+            SshRemotePort = Port(root["ssh_remote_port"], 0, allowZero: true),
+            SshLocalPort = Port(root["ssh_local_port"], 0, allowZero: true),
             Theme = Text(root["theme"]) == "dark" ? "dark" : "light",
             Language = Localization.NormalizeLanguage(Text(root["language"]))
         };
@@ -93,6 +99,9 @@ public sealed class ClientSettingsStore(string path)
             ["server"] = destination.Server, ["share"] = destination.Share, ["path"] = destination.Path
         } : null;
         root["ssh_key_path"] = settings.SshKeyPath;
+        root["ssh_port"] = Port(settings.SshPort, 22);
+        root["ssh_remote_port"] = Port(settings.SshRemotePort, 0, allowZero: true);
+        root["ssh_local_port"] = Port(settings.SshLocalPort, 0, allowZero: true);
         root["theme"] = settings.Theme == "dark" ? "dark" : "light";
         root["language"] = Localization.NormalizeLanguage(settings.Language);
 
@@ -129,4 +138,15 @@ public sealed class ClientSettingsStore(string path)
     }
 
     private static string Text(JsonNode? value) => value is JsonValue scalar && scalar.TryGetValue<string>(out var text) ? text.Trim() : "";
+
+    private static int Port(JsonNode? value, int fallback, bool allowZero = false)
+    {
+        if (value is JsonValue scalar && scalar.TryGetValue<int>(out var port) &&
+            port <= 65535 && (allowZero ? port >= 0 : port >= 1))
+        {
+            return port;
+        }
+
+        return fallback;
+    }
 }

@@ -10,6 +10,8 @@
     <SolidColorBrush x:Key="HoverBrush" Color="#DBE9E2" />
     <SolidColorBrush x:Key="PanelBrush" Color="#E5EBE7" />
     <SolidColorBrush x:Key="AccentBrush" Color="#176B5B" />
+    <SolidColorBrush x:Key="ConnectBrush" Color="#237A45" />
+    <SolidColorBrush x:Key="DisconnectBrush" Color="#B42318" />
     <SolidColorBrush x:Key="SelectedTextBrush" Color="#FFFFFF" />
 
     <Style TargetType="Button">

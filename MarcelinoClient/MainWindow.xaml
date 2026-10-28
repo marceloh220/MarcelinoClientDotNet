@@ -476,28 +476,55 @@
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                             <StackPanel Margin="14,14,14,10">
                                 <StackPanel x:Name="SshAuthenticationPanel" Margin="0,0,0,8">
-                                    <TextBlock Text="{DynamicResource OptionalPrivateKey}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4" />
-                                    <DockPanel>
-                                        <Button x:Name="SelectSshKeyButton" Content="{DynamicResource SelectKey}" Tag="&#xE8D7;" DockPanel.Dock="Right"
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="3*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource KeyPassphrase}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4" />
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource OptionalPrivateKey}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4" />
+                                        <PasswordBox x:Name="SshPassphraseInput" Grid.Row="1" Grid.Column="0" Height="36" Padding="8,0" Margin="0,0,8,0"
+                                                     AutomationProperties.Name="{DynamicResource SshKeyPassphraseAutomation}" />
+                                        <TextBox x:Name="SshKeyPathInput" Grid.Row="1" Grid.Column="1" Height="36" VerticalContentAlignment="Center" Padding="8,0" Margin="0,0,8,0" />
+                                        <Button x:Name="SelectSshKeyButton" Grid.Row="1" Grid.Column="2" Content="{DynamicResource SelectKey}" Tag="&#xE8D7;"
                                                 Click="SelectSshKeyButton_Click" />
-                                        <TextBox x:Name="SshKeyPathInput" Height="36" VerticalContentAlignment="Center" Padding="8,0" />
-                                    </DockPanel>
-                                    <DockPanel Margin="0,8,0,0">
-                                        <TextBlock Text="{DynamicResource KeyPassphrase}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                        <PasswordBox x:Name="SshPassphraseInput" Height="36" Padding="8,0" AutomationProperties.Name="{DynamicResource SshKeyPassphraseAutomation}" />
-                                    </DockPanel>
+                                    </Grid>
                                 </StackPanel>
-                                <Grid>
+                                <Grid x:Name="SshTunnelControlsPanel" Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="1.2*" />
+                                        <ColumnDefinition Width="1*" />
+                                        <ColumnDefinition Width="1*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="SshStatusText" Text="{DynamicResource LoginForSsh}"
-                                               Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <Button x:Name="SshPasteButton" Grid.Column="1" Content="{DynamicResource Paste}" Tag="&#xE77F;" IsEnabled="False" Margin="0,0,8,0" Click="SshPasteButton_Click" />
-                                    <Button x:Name="SshToggleButton" Grid.Column="2" Content="{DynamicResource ConnectSsh}" Tag="&#xE8D4;" IsEnabled="False" Click="SshToggleButton_Click" />
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource SshPortLabel}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4" />
+                                    <TextBlock x:Name="SshRemotePortLabelText" Grid.Row="0" Grid.Column="1" Text="{DynamicResource SshRemotePortLabel}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4" />
+                                    <TextBlock x:Name="SshLocalPortLabelText" Grid.Row="0" Grid.Column="2" Text="{DynamicResource SshLocalPortLabel}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,8,4" />
+                                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{DynamicResource SshTunnelLabel}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4" />
+                                    <TextBox x:Name="SshPortInput" Grid.Row="1" Grid.Column="0" Height="36" MaxLength="5" Padding="8,0" Margin="0,0,8,0"
+                                             VerticalContentAlignment="Center" AutomationProperties.Name="{DynamicResource SshPortLabel}" />
+                                    <TextBox x:Name="SshRemotePortInput" Grid.Row="1" Grid.Column="1" Height="36" MaxLength="5" Padding="8,0" Margin="0,0,8,0"
+                                             VerticalContentAlignment="Center" AutomationProperties.Name="{DynamicResource SshRemotePortLabel}" />
+                                    <TextBox x:Name="SshLocalPortInput" Grid.Row="1" Grid.Column="2" Height="36" MaxLength="5" Padding="8,0" Margin="0,0,8,0"
+                                             VerticalContentAlignment="Center" AutomationProperties.Name="{DynamicResource SshLocalPortLabel}" />
+                                    <Button x:Name="SshTunnelToggleButton" Grid.Row="1" Grid.Column="3" Content="{DynamicResource ConnectSshTunnel}" Tag="&#xE8D4;"
+                                            IsEnabled="False" Click="SshTunnelToggleButton_Click" />
                                 </Grid>
+                                <TextBlock x:Name="SshStatusText" Text="{DynamicResource LoginForSsh}"
+                                           Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <WrapPanel x:Name="SshTerminalActionsPanel">
+                                    <Button x:Name="SshPasteButton" Content="{DynamicResource Paste}" Tag="&#xE77F;" IsEnabled="False" Margin="0,0,8,0" Click="SshPasteButton_Click" />
+                                    <Button x:Name="SshToggleButton" Content="{DynamicResource ConnectSsh}" Tag="&#xE8D4;" IsEnabled="False" Click="SshToggleButton_Click" />
+                                </WrapPanel>
                             </StackPanel>
                             <local:SshTerminalView x:Name="SshTerminal" Grid.Row="1" Margin="14,0,14,14" AutomationProperties.Name="{DynamicResource SshTerminalAutomation}" />
                         </Grid>

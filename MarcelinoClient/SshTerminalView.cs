@@ -51,10 +51,10 @@ public sealed class SshTerminalView : FrameworkElement
         InvalidateVisual();
     }
 
-    private FormattedText Format(string text, Brush brush) => new(text, CultureInfo.CurrentCulture,
-        FlowDirection.LeftToRight, _typeface, FontSize, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+    private FormattedText Format(string text, Brush brush, double pixelsPerDip) => new(text, CultureInfo.CurrentCulture,
+        FlowDirection.LeftToRight, _typeface, FontSize, brush, pixelsPerDip);
 
-    private double CellWidth => Format("M", Brushes.White).WidthIncludingTrailingWhitespace;
+    private double CellWidth => Format("M", Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip).WidthIncludingTrailingWhitespace;
 
     private void ResizeTerminal()
     {
@@ -81,7 +81,8 @@ public sealed class SshTerminalView : FrameworkElement
     {
         base.OnRender(drawingContext);
         drawingContext.DrawRectangle(Brushes.Black, null, new Rect(RenderSize));
-        var cellWidth = CellWidth;
+        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var cellWidth = Format("M", Brushes.White, pixelsPerDip).WidthIncludingTrailingWhitespace;
         var lines = _terminal.GetPageSpans(_terminal.ViewPort.TopRow, Rows, Columns);
         for (var row = 0; row < lines.Count; row++)
         {
@@ -89,32 +90,41 @@ public sealed class SshTerminalView : FrameworkElement
             foreach (var span in lines[row].Spans)
             {
                 var elements = StringInfo.GetTextElementEnumerator(span.Text);
+                var cellCount = 0;
                 while (elements.MoveNext())
                 {
-                    var text = Format(elements.GetTextElement(), ColorBrush(span.ForgroundColor));
-                    if (span.Bold)
-                    {
-                        text.SetFontWeight(FontWeights.Bold);
-                    }
-
-                    if (span.Underline)
-                    {
-                        text.SetTextDecorations(TextDecorations.Underline);
-                    }
-
-                    var origin = new Point(Padding + column * cellWidth, Padding + row * LineHeight);
-                    drawingContext.DrawRectangle(ColorBrush(span.BackgroundColor), null,
-                        new Rect(origin, new Size(cellWidth, LineHeight)));
-                    if (!span.Hidden && text.WidthIncludingTrailingWhitespace > 0)
-                    {
-                        drawingContext.PushTransform(new ScaleTransform(
-                            cellWidth / text.WidthIncludingTrailingWhitespace, 1, origin.X, origin.Y));
-                        drawingContext.DrawText(text, origin);
-                        drawingContext.Pop();
-                    }
-
-                    column++;
+                    cellCount++;
                 }
+
+                if (cellCount == 0)
+                {
+                    continue;
+                }
+
+                var origin = new Point(Padding + column * cellWidth, Padding + row * LineHeight);
+                var spanWidth = cellCount * cellWidth;
+                drawingContext.DrawRectangle(ColorBrush(span.BackgroundColor), null,
+                    new Rect(origin, new Size(spanWidth, LineHeight)));
+                var text = Format(span.Text, ColorBrush(span.ForgroundColor), pixelsPerDip);
+                if (span.Bold)
+                {
+                    text.SetFontWeight(FontWeights.Bold);
+                }
+
+                if (span.Underline)
+                {
+                    text.SetTextDecorations(TextDecorations.Underline);
+                }
+
+                if (!span.Hidden && text.WidthIncludingTrailingWhitespace > 0)
+                {
+                    drawingContext.PushTransform(new ScaleTransform(
+                        spanWidth / text.WidthIncludingTrailingWhitespace, 1, origin.X, origin.Y));
+                    drawingContext.DrawText(text, origin);
+                    drawingContext.Pop();
+                }
+
+                column += cellCount;
             }
         }
 

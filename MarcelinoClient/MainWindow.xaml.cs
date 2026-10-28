@@ -38,7 +38,9 @@ public partial class MainWindow : Window
             ["ButtonBrush"] = dark ? "#303B36" : "#F7F9F7",
             ["HoverBrush"] = dark ? "#3D5348" : "#DBE9E2",
             ["PanelBrush"] = dark ? "#2B3530" : "#E5EBE7",
-            ["AccentBrush"] = dark ? "#286F60" : "#176B5B"
+            ["AccentBrush"] = dark ? "#286F60" : "#176B5B",
+            ["ConnectBrush"] = dark ? "#36A269" : "#237A45",
+            ["DisconnectBrush"] = dark ? "#D94F49" : "#B42318"
         };
 
         foreach (var (key, color) in colors)
@@ -275,6 +277,7 @@ public partial class MainWindow : Window
         PasswordInput.Clear();
         SetLoginPasswordVisibility(false);
         DisconnectButton.IsEnabled = false;
+        SetSshActionButtonState(DisconnectButton, disconnecting: false);
         SetStatus(message);
     }
 
@@ -359,6 +362,7 @@ public partial class MainWindow : Window
         ConnectButton.IsEnabled = !busy;
         ScanButton.IsEnabled = !busy;
         DisconnectButton.IsEnabled = !busy && _connectedHost is not null;
+        SetSshActionButtonState(DisconnectButton, disconnecting: _connectedHost is not null);
         HostInput.IsEnabled = !busy;
         DomainInput.IsEnabled = !busy;
         UsernameInput.IsEnabled = !busy;
