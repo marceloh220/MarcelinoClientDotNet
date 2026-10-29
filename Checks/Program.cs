@@ -647,6 +647,22 @@ internal static class Program
                 Math.Abs(entry.Bounds.X - (8 + 40 * cellWidth)) < 0.01 &&
                 Math.Abs(entry.Bounds.Width - cellWidth) < 0.01),
                 "SSH terminal aligns Braille, box drawing and bold combining text to fixed cells");
+            terminal.Reset();
+            terminal.Feed(Encoding.UTF8.GetBytes(string.Concat(Enumerable.Repeat("界", 20)) + "\u001b[42m \u001b[0m"));
+            var cjkDrawing = new DrawingGroup();
+            using (var drawing = cjkDrawing.Open())
+            {
+                typeof(SshTerminalView).GetMethod("OnRender",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .Invoke(terminal, [drawing]);
+            }
+
+            var cjkMarker = cjkDrawing.Children.OfType<GeometryDrawing>()
+                .Single(entry => entry.Brush is SolidColorBrush brush && brush.Color.G > 0 &&
+                    brush.Color.R == 0 && brush.Color.B == 0);
+            Check(Math.Abs(cjkMarker.Bounds.X - (8 + 40 * cellWidth)) < 0.01 &&
+                Math.Abs(cjkMarker.Bounds.Width - cellWidth) < 0.01,
+                "SSH terminal advances wide CJK glyphs by two terminal cells");
             var authenticationPanel = (FrameworkElement)window.FindName("SshAuthenticationPanel");
             var terminalActionsPanel = (FrameworkElement)window.FindName("SshTerminalActionsPanel");
             var tunnelControlsPanel = (Grid)window.FindName("SshTunnelControlsPanel");

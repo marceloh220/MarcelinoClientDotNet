@@ -89,42 +89,46 @@ public sealed class SshTerminalView : FrameworkElement
             var column = 0;
             foreach (var span in lines[row].Spans)
             {
-                var elements = StringInfo.GetTextElementEnumerator(span.Text);
-                var cellCount = 0;
-                while (elements.MoveNext())
-                {
-                    cellCount++;
-                }
-
-                if (cellCount == 0)
+                if (span.Text.Length == 0)
                 {
                     continue;
                 }
 
-                var origin = new Point(Padding + column * cellWidth, Padding + row * LineHeight);
-                var spanWidth = cellCount * cellWidth;
-                drawingContext.DrawRectangle(ColorBrush(span.BackgroundColor), null,
-                    new Rect(origin, new Size(spanWidth, LineHeight)));
-                var text = Format(span.Text, ColorBrush(span.ForgroundColor), pixelsPerDip);
-                if (span.Bold)
+                var foreground = ColorBrush(span.ForgroundColor);
+                var background = ColorBrush(span.BackgroundColor);
+                if (span.Text.All(character => character <= 0x7f))
                 {
-                    text.SetFontWeight(FontWeights.Bold);
+                    var origin = new Point(Padding + column * cellWidth, Padding + row * LineHeight);
+                    var spanWidth = span.Text.Length * cellWidth;
+                    drawingContext.DrawRectangle(background, null,
+                        new Rect(origin, new Size(spanWidth, LineHeight)));
+                    if (!span.Hidden)
+                    {
+                        DrawText(drawingContext, CreateText(span.Text, foreground, span.Bold, span.Underline, pixelsPerDip),
+                            origin, spanWidth);
+                    }
+
+                    column += span.Text.Length;
+                    continue;
                 }
 
-                if (span.Underline)
+                var elements = StringInfo.GetTextElementEnumerator(span.Text);
+                while (elements.MoveNext())
                 {
-                    text.SetTextDecorations(TextDecorations.Underline);
-                }
+                    var text = CreateText(elements.GetTextElement(), foreground, span.Bold, span.Underline, pixelsPerDip);
+                    var cellCount = Math.Clamp(
+                        (int)Math.Round(text.WidthIncludingTrailingWhitespace / cellWidth, MidpointRounding.AwayFromZero), 1, 2);
+                    var origin = new Point(Padding + column * cellWidth, Padding + row * LineHeight);
+                    var cellSpanWidth = cellCount * cellWidth;
+                    drawingContext.DrawRectangle(background, null,
+                        new Rect(origin, new Size(cellSpanWidth, LineHeight)));
+                    if (!span.Hidden)
+                    {
+                        DrawText(drawingContext, text, origin, cellSpanWidth);
+                    }
 
-                if (!span.Hidden && text.WidthIncludingTrailingWhitespace > 0)
-                {
-                    drawingContext.PushTransform(new ScaleTransform(
-                        spanWidth / text.WidthIncludingTrailingWhitespace, 1, origin.X, origin.Y));
-                    drawingContext.DrawText(text, origin);
-                    drawingContext.Pop();
+                    column += cellCount;
                 }
-
-                column += cellCount;
             }
         }
 
@@ -151,6 +155,35 @@ public sealed class SshTerminalView : FrameworkElement
         }
 
         return brush;
+    }
+
+    private FormattedText CreateText(string value, Brush foreground, bool bold, bool underline, double pixelsPerDip)
+    {
+        var text = Format(value, foreground, pixelsPerDip);
+        if (bold)
+        {
+            text.SetFontWeight(FontWeights.Bold);
+        }
+
+        if (underline)
+        {
+            text.SetTextDecorations(TextDecorations.Underline);
+        }
+
+        return text;
+    }
+
+    private static void DrawText(DrawingContext drawingContext, FormattedText text, Point origin, double targetWidth)
+    {
+        if (text.WidthIncludingTrailingWhitespace <= 0)
+        {
+            return;
+        }
+
+        drawingContext.PushTransform(new ScaleTransform(
+            targetWidth / text.WidthIncludingTrailingWhitespace, 1, origin.X, origin.Y));
+        drawingContext.DrawText(text, origin);
+        drawingContext.Pop();
     }
 
     protected override void OnMouseDown(MouseButtonEventArgs e)
